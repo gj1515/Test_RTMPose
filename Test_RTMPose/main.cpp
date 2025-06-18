@@ -6,9 +6,6 @@
 #include "utils/visualize.h"
 #include "pose_tracker_params.h"
 
-#include <chrono>
-#include <iostream>
-
 int main(int argc, char* argv[]) {
     std::string det_model = "D:/Dev/Project/mmdeploy/rtmpose-ort/rtmdet-nano";
     std::string pose_model = "C:/Users/user/Downloads/rtmpose-l_simcc-body7_pt-body7-halpe26_700e-256x192-2abb7558_20230605.zip";
@@ -40,14 +37,6 @@ int main(int argc, char* argv[]) {
     v.set_background(background);
     v.set_skeleton(utils::Skeleton::get(skeleton));
 
-    // *************************************************************
-    auto program_start = std::chrono::high_resolution_clock::now();
-    int frame_count = 0;
-    auto last_fps_time = std::chrono::high_resolution_clock::now();
-    int fps_frame_count = 0;
-    // *************************************************************
-
-
     for (const cv::Mat& frame : input_stream) {
         // apply the pipeline with the tracker state and video frame; the result is an array-like class
         // holding references to `mmdeploy_pose_tracker_target_t`, will be released automatically on
@@ -65,24 +54,7 @@ int main(int argc, char* argv[]) {
             // user requested exit by pressing ESC
             break;
         }
-
-        // *************************************************************
-        frame_count++;
-        fps_frame_count++;
-        auto current_time = std::chrono::high_resolution_clock::now();
-        auto elapsed_since_last_fps = std::chrono::duration_cast<std::chrono::milliseconds>(current_time - last_fps_time);
-        // *************************************************************
     }
-
-    // *************************************************************
-    auto program_end = std::chrono::high_resolution_clock::now();
-    auto total_time = std::chrono::duration_cast<std::chrono::milliseconds>(program_end - program_start);
-    double average_fps = frame_count * 1000.0 / total_time.count();
-    std::cout << "\n=== FPS Statistics ===" << std::endl;
-    std::cout << "Total frames processed: " << frame_count << std::endl;
-    std::cout << "Total processing time: " << total_time.count() << " ms" << std::endl;
-    std::cout << "Average FPS: " << std::fixed << std::setprecision(2) << average_fps << std::endl;
-    // *************************************************************
 
     return 0;
 }
