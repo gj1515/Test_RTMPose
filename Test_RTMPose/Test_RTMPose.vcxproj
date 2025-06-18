@@ -131,15 +131,15 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp" />
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="pose_tracker_params.h" />
     <ClInclude Include="utils\argparse.h" />
     <ClInclude Include="utils\mediaio.h" />
     <ClInclude Include="utils\palette.h" />
     <ClInclude Include="utils\skeleton.h" />
     <ClInclude Include="utils\visualize.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main_batch.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
