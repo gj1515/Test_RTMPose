@@ -9,7 +9,7 @@
 
 int main(int argc, char* argv[]) {
     std::string det_model = "D:/Dev/Project/Test_RTMPose/models/RTMDet/rtmdet-n_320x320";
-    std::string pose_model = "D:/Dev/Project/Test_RTMPose/models/RTMPose/cocowholebody_rtmpose_l_256x192";
+    std::string pose_model = "D:/Dev/Project/Test_RTMPose/models/RTMPose/cocowholebody_rtmpose_l_384x288";
     std::string input = "C:/Capture/0408_Calibration/HSH/motion1/export/Teli_3.mp4";
     std::string output = "D:/Dev/Project/Test_RTMPose/demo/outputs/output.mp4";
 
@@ -43,14 +43,16 @@ int main(int argc, char* argv[]) {
         // apply the pipeline with the tracker state and video frame; the result is an array-like class
         // holding references to `mmdeploy_pose_tracker_target_t`, will be released automatically on
         // destruction
+        
+        // Inference
         mmdeploy::PoseTracker::Result result = tracker.Apply(state, frame);
 
+        // Postprocess
         // visualize results
         auto sess = v.get_session(frame);
         for (const mmdeploy_pose_tracker_target_t& target : result) {
             sess.add_pose(target.keypoints, target.scores, target.keypoint_count, FLAGS_pose_kpt_thr);
         }
-
         // write to output stream
         if (!output_stream.write(sess.get())) {
             // user requested exit by pressing ESC

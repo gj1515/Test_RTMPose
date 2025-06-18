@@ -41,13 +41,13 @@ std::vector<std::string> getVideoFiles(const std::string& folder_path) {
     return video_files;
 }
 
-bool validateFrameCounts(const std::vector<std::string>& video_paths, int& total_frames) {
+bool getMaximumFrameCount(const std::vector<std::string>& video_paths, int& max_frames) {
     if (video_paths.empty()) {
         std::cerr << "Error: No video files found." << std::endl;
         return false;
     }
 
-    total_frames = -1;
+    max_frames = 0;
 
     for (size_t i = 0; i < video_paths.size(); i++) {
         cv::VideoCapture cap(video_paths[i]);
@@ -58,25 +58,23 @@ bool validateFrameCounts(const std::vector<std::string>& video_paths, int& total
 
         int frame_count = static_cast<int>(cap.get(cv::CAP_PROP_FRAME_COUNT));
 
-        if (total_frames == -1) {
-            total_frames = frame_count;
-        }
-        else if (total_frames != frame_count) {
-            std::cerr << "Error: All videos must have the same frame count!" << std::endl;
-            std::cerr << "Expected frame count: " << total_frames << ", Current video frame count: " << frame_count << std::endl;
-            return false;
+        std::string filename = std::filesystem::path(video_paths[i]).filename().string();
+
+        if (frame_count > max_frames) {
+            max_frames = frame_count;
         }
     }
     return true;
 }
 
+
 int main(int argc, char* argv[]) {
     std::string det_model = "D:/Dev/Project/Test_RTMPose/models/RTMDet/rtmdet-n_320x320";
-    std::string pose_model = "D:/Dev/Project/Test_RTMPose/models/RTMPose/halpe26_rtmpose-l_256x192";
-    std::string input = "C:/Capture/0408_Calibration/HSH/motion1/export";
-    std::string output = "D:/Dev/Project/Test_RTMPose/demo/outputs";
+    std::string pose_model = "D:/Dev/Project/Test_RTMPose/models/RTMPose/halpe26_rtmpose-l_384x288";
+    std::string input = "C:/Capture_Femto/20250526_142939_Femto_Motion1";
+    std::string output = "D:/Dev/Project/Test_RTMPose/demo/outputs/Femto";
 
-    std::string skeleton = "halpe26";  // "coco", "coco-wholebody", "halpe26"
+    std::string skeleton = "halpe26";         // "coco", "coco-wholebody", "halpe26"
     std::string device = "cuda";              // "cuda", "cpu"
     int output_size = 0;                      // "Long-edge of output frames" (0: original size)
     int flip = 0;                             // "Set to 1 for flipping the input horizontally"
@@ -84,14 +82,12 @@ int main(int argc, char* argv[]) {
     std::string background = "default";       // Output background, "default": original image, "black": black background
 
 
-
-
     double total_preprocess_time = 0.0;
     double total_inference_time = 0.0;
     double total_postprocess_time = 0.0;
     int processed_frames = 0;
-
     auto total_start_time = std::chrono::high_resolution_clock::now();
+
     std::vector<std::string> video_files = getVideoFiles(input);
 
     if (video_files.empty()) {
@@ -99,8 +95,8 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    int total_frames;
-    if (!validateFrameCounts(video_files, total_frames)) {
+    int max_frames;
+    if (!getMaximumFrameCount(video_files, max_frames)) {
         return -1;
     }
 
@@ -121,6 +117,7 @@ int main(int argc, char* argv[]) {
         input_streams.emplace_back(video_files[i], flip);
 
         std::filesystem::path input_path(video_files[i]);
+
         std::string output_filename = input_path.filename().string();
         std::filesystem::path output_dir = std::filesystem::path(output);
         std::string output_path = (output_dir / output_filename).string();
@@ -133,10 +130,8 @@ int main(int argc, char* argv[]) {
     v.set_background(background);
     v.set_skeleton(utils::Skeleton::get(skeleton));
 
-    for (int frame_idx = 0; frame_idx < total_frames; frame_idx++) {
-        
-        
-        
+    for (int frame_idx = 0; frame_idx < max_frames; frame_idx++) {
+
         auto preprocess_start = std::chrono::high_resolution_clock::now();
 
         std::vector<cv::Mat> batch_frames;
@@ -165,39 +160,26 @@ int main(int argc, char* argv[]) {
             mmdeploy_frames.push_back(mmdeploy::Mat(frame));
         }
 
-
         auto preprocess_end = std::chrono::high_resolution_clock::now();
         total_preprocess_time += std::chrono::duration<double>(preprocess_end - preprocess_start).count();
-
         auto inference_start = std::chrono::high_resolution_clock::now();
-
-
 
         // Inference
         std::vector<mmdeploy::PoseTracker::Result> batch_results = tracker.Apply(states, mmdeploy_frames);
 
-
         auto inference_end = std::chrono::high_resolution_clock::now();
         total_inference_time += std::chrono::duration<double>(inference_end - inference_start).count();
-        
         auto postprocess_start = std::chrono::high_resolution_clock::now();
 
-
-        std::vector<decltype(v.get_session(batch_frames[0]))> sessions;
-        sessions.reserve(video_files.size());
-
+        // Postprocess
         for (size_t i = 0; i < video_files.size(); i++) {
-            sessions.emplace_back(v.get_session(batch_frames[i]));
-        }
-
-        for (size_t i = 0; i < video_files.size(); i++) {
+            // visualize results
+            auto sess = v.get_session(batch_frames[i]);
             for (const mmdeploy_pose_tracker_target_t& target : batch_results[i]) {
-                sessions[i].add_pose(target.keypoints, target.scores, target.keypoint_count, FLAGS_pose_kpt_thr);
+                sess.add_pose(target.keypoints, target.scores, target.keypoint_count, FLAGS_pose_kpt_thr);
             }
-        }
-
-        for (size_t i = 0; i < video_files.size(); i++) {
-            if (!output_streams[i].write(sessions[i].get())) {
+            // write to output stream
+            if (!output_streams[i].write(sess.get())) {
                 std::cout << "User requested exit for video " << i << std::endl;
                 break;
             }
@@ -212,7 +194,6 @@ int main(int argc, char* argv[]) {
     double total_time = std::chrono::duration<double>(total_end_time - total_start_time).count();
 
     std::cout << "Batch processing completed!" << std::endl;
-
 
     if (processed_frames > 0) {
         double avg_preprocess_fps = processed_frames / total_preprocess_time;
