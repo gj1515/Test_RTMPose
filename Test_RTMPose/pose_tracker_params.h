@@ -16,8 +16,7 @@ DEFINE_double(pose_nms_thr, 0.5,
               "estimations collapse to the same target");
 
 DEFINE_double(track_iou_thr, 0.4, "IOU threshold for associating missing tracks");
-DEFINE_int32(track_max_missing, 10,
-             "Max number of missing frames before a missing tracks is removed");
+DEFINE_int32(track_max_missing, 10, "Max number of missing frames before a missing tracks is removed");
 
 void InitTrackerParams(mmdeploy::PoseTracker::Params& params) {
   params->det_interval = FLAGS_det_interval;

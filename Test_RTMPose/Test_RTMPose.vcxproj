@@ -131,7 +131,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="pose_tracker_params.h" />
     <ClInclude Include="utils\argparse.h" />
     <ClInclude Include="utils\mediaio.h" />
     <ClInclude Include="utils\palette.h" />

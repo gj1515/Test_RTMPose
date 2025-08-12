@@ -34,7 +34,7 @@ static std::string get_extension(const std::string& path) {
 int ext2fourcc(const std::string& ext) {
   auto get_fourcc = [](const char* s) { return cv::VideoWriter::fourcc(s[0], s[1], s[2], s[3]); };
   static std::map<std::string, int> ext2fourcc{
-      {".mp4", get_fourcc("MJPG")},
+      {".mp4", get_fourcc("mp4v")},
       {".avi", get_fourcc("DIVX")},
       {".mkv", get_fourcc("MJPG")},
       {".wmv", get_fourcc("WMV3")},

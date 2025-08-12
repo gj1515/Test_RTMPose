@@ -70,7 +70,7 @@ bool getMaximumFrameCount(const std::vector<std::string>& video_paths, int& max_
 
 int main(int argc, char* argv[]) {
     std::string det_model = "D:/Dev/Project/Test_RTMPose/models/RTMDet/rtmdet-n_320x320";
-    std::string pose_model = "D:/Dev/Project/Test_RTMPose/models/RTMPose/halpe26_rtmpose-l_384x288";
+    std::string pose_model = "D:/Dev/Project/Test_RTMPose/models/RTMPose/halpe26_rtmpose-l_256x192";
     std::string input = "C:/Capture_Femto/20250526_142939_Femto_Motion1";
     std::string output = "D:/Dev/Project/Test_RTMPose/demo/outputs/Femto";
 
@@ -80,13 +80,6 @@ int main(int argc, char* argv[]) {
     int flip = 0;                             // "Set to 1 for flipping the input horizontally"
     int show = -1;                            // "Delay passed to `cv::waitKey` when using `cv::imshow`; -1: disable"
     std::string background = "default";       // Output background, "default": original image, "black": black background
-
-
-    double total_preprocess_time = 0.0;
-    double total_inference_time = 0.0;
-    double total_postprocess_time = 0.0;
-    int processed_frames = 0;
-    auto total_start_time = std::chrono::high_resolution_clock::now();
 
     std::vector<std::string> video_files = getVideoFiles(input);
 
@@ -131,9 +124,6 @@ int main(int argc, char* argv[]) {
     v.set_skeleton(utils::Skeleton::get(skeleton));
 
     for (int frame_idx = 0; frame_idx < max_frames; frame_idx++) {
-
-        auto preprocess_start = std::chrono::high_resolution_clock::now();
-
         std::vector<cv::Mat> batch_frames;
         batch_frames.reserve(video_files.size());
 
@@ -160,16 +150,8 @@ int main(int argc, char* argv[]) {
             mmdeploy_frames.push_back(mmdeploy::Mat(frame));
         }
 
-        auto preprocess_end = std::chrono::high_resolution_clock::now();
-        total_preprocess_time += std::chrono::duration<double>(preprocess_end - preprocess_start).count();
-        auto inference_start = std::chrono::high_resolution_clock::now();
-
         // Inference
         std::vector<mmdeploy::PoseTracker::Result> batch_results = tracker.Apply(states, mmdeploy_frames);
-
-        auto inference_end = std::chrono::high_resolution_clock::now();
-        total_inference_time += std::chrono::duration<double>(inference_end - inference_start).count();
-        auto postprocess_start = std::chrono::high_resolution_clock::now();
 
         // Postprocess
         for (size_t i = 0; i < video_files.size(); i++) {
@@ -184,31 +166,9 @@ int main(int argc, char* argv[]) {
                 break;
             }
         }
-
-        auto postprocess_end = std::chrono::high_resolution_clock::now();
-        total_postprocess_time += std::chrono::duration<double>(postprocess_end - postprocess_start).count();
-        processed_frames++;
     }
-
-    auto total_end_time = std::chrono::high_resolution_clock::now();
-    double total_time = std::chrono::duration<double>(total_end_time - total_start_time).count();
 
     std::cout << "Batch processing completed!" << std::endl;
-
-    if (processed_frames > 0) {
-        double avg_preprocess_fps = processed_frames / total_preprocess_time;
-        double avg_inference_fps = processed_frames / total_inference_time;
-        double avg_postprocess_fps = processed_frames / total_postprocess_time;
-        double avg_total_fps = processed_frames / total_time;
-
-        std::cout << "\n=== Performance Results ===" << std::endl;
-        std::cout << "Total Processed Frames: " << processed_frames << std::endl;
-        std::cout << "Total Processing Time: " << total_time << " seconds" << std::endl;
-        std::cout << "Preprocess Time: " << total_preprocess_time << " seconds (FPS: " << avg_preprocess_fps << ")" << std::endl;
-        std::cout << "Inference Time: " << total_inference_time << " seconds (FPS: " << avg_inference_fps << ")" << std::endl;
-        std::cout << "Postprocess Time: " << total_postprocess_time << " seconds (FPS: " << avg_postprocess_fps << ")" << std::endl;
-        std::cout << "Average Total FPS: " << avg_total_fps << std::endl;
-    }
 
     return 0;
 }
